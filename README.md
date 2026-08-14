@@ -1,33 +1,43 @@
 # LeetCode Draw
 
-LeetCode Draw is a local-first macOS desktop app for turning a personal practice list into a calm, randomly drawable question library. It starts with zero questions and uses a simple JSON import format instead of asking you to hand-enter a list.
+LeetCode Draw is a local-first macOS desktop app that turns a personal LeetCode practice list into a calm, randomly drawable question library. A new installation starts with **zero questions**. Instead of entering questions one at a time, use any large language model to convert a screenshot or text export into one validated JSON file, then import that file into the app.
 
-The interface supports light, dark, and system appearance modes, warm liquid-glass styling, adaptive Dock icons, difficulty browsing, and a tarot-inspired draw animation.
+The interface combines a warm light theme, a true dark theme, and an optional system setting with a liquid-glass treatment and a tarot-inspired draw animation.
 
-> This is an independent study tool. It is not affiliated with or endorsed by LeetCode.
+> LeetCode Draw is an independent study tool. It is not affiliated with or endorsed by LeetCode.
 
-## What it does
+## Highlights
 
-- Starts empty: a fresh installation has **0** questions available to draw.
-- Imports a question library from a validated JSON file (up to 2 MB).
-- Shows your library by **简单 / 中等 / 困难**, with the original LeetCode problem number on every item.
-- Searches, opens the matching LeetCode China problem page on demand, and removes individual questions.
-- Randomly draws from the available pool; drawn questions enter a five-day cooldown.
-- Keeps a local draw history, import report, theme preference, and custom library between launches.
-- Includes a complete, safe three-question sample library (`#1`, `#2`, and `#42`).
+- **Start empty.** A fresh installation has no built-in question library and nothing available to draw.
+- **Import once, not one-by-one.** Import a validated JSON library created from a practice-site screenshot or text.
+- **Keep the official reference.** Every item preserves its original LeetCode problem number.
+- **Browse by difficulty.** View counts and questions in 简单, 中等, and 困难 categories.
+- **Draw with a cooldown.** A drawn question is held out of the pool for five days, making repeated draws more useful.
+- **Review locally.** Search the library, inspect recent draws, remove an individual imported question, and open the matching LeetCode China search result when you choose to.
+- **Choose your appearance.** Select Light, Dark, or System appearance; the Dock icon follows the active light or dark presentation.
+- **Get useful import feedback.** Invalid or duplicate rows are reported while valid rows still import.
 
-## Privacy
+## Privacy by design
 
-Your personal question library is private by design.
+Your study library stays on your Mac.
 
-- There is no account system, telemetry, cloud sync, or application server.
-- Imported JSON files are read locally through the native file picker; your question list and draw history are stored only in the operating system's local application-data area.
-- The app opens `leetcode.cn` only when you explicitly choose to open a question; it never sends your library or history there.
-- This repository contains only a generic three-question example. Do not commit a real imported library to a fork or issue; keep private exports outside the source tree (or inside the ignored `private/` folder).
+- No account system, telemetry, cloud sync, analytics, or application server.
+- Imported JSON is read locally through the native file picker. The library, draw history, import report, and theme setting remain in local application data.
+- The app opens `leetcode.cn` only after you explicitly choose to open a question. It never sends your library or draw history there.
+- This repository intentionally contains only a generic three-question sample. Do not commit a real library to a fork, issue, or pull request. Keep private exports outside the source tree or inside the ignored `private/` folder.
 
-## Import a library
+If you choose to give a screenshot or text list to an external model for conversion, that is a separate choice made outside LeetCode Draw. Review that service's privacy policy before sharing your material.
 
-The intended flow is: give a practice-site screenshot or text to a large language model, ask it to produce the JSON below, save the answer as a `.json` file, and import it in LeetCode Draw. You never need to type questions into the app one by one.
+## Import a question library
+
+1. Give a screenshot or text list from your practice site to a large language model.
+2. Ask it to return **only** a JSON file matching the schema below. Do not ask it to add explanations or Markdown fences.
+3. Save the result as a `.json` file.
+4. In LeetCode Draw, choose **Import JSON** and select that file.
+
+You can use this prompt with a model:
+
+> Convert the supplied question list into the exact LeetCode Draw JSON format below. Preserve each official LeetCode problem number, title, and difficulty. Use only `简单`, `中等`, or `困难` for `difficulty`. Return JSON only; do not add Markdown or commentary.
 
 ```json
 {
@@ -53,11 +63,23 @@ The intended flow is: give a practice-site screenshot or text to a large languag
 }
 ```
 
-`difficulty` must be `简单`, `中等`, or `困难`. The app also accepts the legacy `lc` field for existing libraries, but new files should use `leetcodeId`. A ready-to-import copy is available at [resources/examples/leetcode-draw-example.json](resources/examples/leetcode-draw-example.json).
+### Format rules
 
-## Develop
+- The root fields must be exactly `format: "leetcode-draw/question-library"` and `version: 1`.
+- `questions` must be an array of question objects.
+- Each question needs `leetcodeId`, `name`, and `difficulty`.
+- `leetcodeId` is the official positive LeetCode problem number and is used to keep entries traceable.
+- `difficulty` must be one of `简单`, `中等`, or `困难`.
+- Files are limited to 2 MB. The legacy `lc` field remains readable for existing libraries, but new files should use `leetcodeId`.
 
-Requirements: macOS and Node.js 20 or later.
+The repository includes a safe, ready-to-import example: [resources/examples/leetcode-draw-example.json](resources/examples/leetcode-draw-example.json).
+
+## Run locally
+
+### Requirements
+
+- macOS
+- Node.js 20 or later
 
 ```bash
 npm ci
@@ -66,13 +88,23 @@ npm run build
 npm run electron:dev
 ```
 
-Create a macOS DMG after the tests and build succeed:
+## Package a macOS app
+
+Create a DMG after the tests and production build pass:
 
 ```bash
 npm run dist
 ```
 
-The app uses Electron, React, TypeScript, Vite, and `electron-store`. The generated release, build output, dependencies, and local private-library folder are intentionally excluded from version control.
+The result is written to `release/LeetCode-Draw-<version>-arm64.dmg`. The local build uses an ad-hoc macOS signature so the complete bundle can be integrity-checked on the build machine. It is not an Apple Developer ID or notarized distribution; maintainers distributing builds to other people should configure their own Developer ID signing and notarization.
+
+## Quality checks
+
+`npm test` covers the import format, duplicate and invalid-row handling, the three-question sample, cooldown behavior, theme behavior, and the main import/draw flow. `npm run build` also checks the Electron bridge and packaged assets before a DMG is created.
+
+## Technology
+
+Electron, React, TypeScript, Vite, Vitest, and `electron-store`.
 
 ## License
 
