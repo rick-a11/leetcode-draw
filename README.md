@@ -4,7 +4,7 @@ LeetCode Draw is a local-first macOS desktop app that turns a personal LeetCode 
 
 The interface combines a warm light theme, a true dark theme, and an optional system setting with a liquid-glass treatment and a tarot-inspired draw animation.
 
-![LeetCode Draw showing a fresh, empty library in its light appearance](docs/images/app-overview-light.jpg)
+[View the light-mode app preview →](docs/images/app-overview-light.jpg)
 
 *A fresh installation: zero questions, no draw history, and one JSON import away from a personal practice library. The empty-card light gently breathes in the app and settles to a still composition when macOS Reduce Motion is enabled.*
 
