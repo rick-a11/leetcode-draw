@@ -1,0 +1,21 @@
+{
+  "format": "leetcode-draw/question-library",
+  "version": 1,
+  "questions": [
+    {
+      "leetcodeId": 1,
+      "name": "两数之和",
+      "difficulty": "简单"
+    },
+    {
+      "leetcodeId": 2,
+      "name": "两数相加",
+      "difficulty": "中等"
+    },
+    {
+      "leetcodeId": 42,
+      "name": "接雨水",
+      "difficulty": "困难"
+    }
+  ]
+}

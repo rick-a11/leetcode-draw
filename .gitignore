@@ -1,0 +1,12 @@
+node_modules/
+.npm-cache/
+dist/
+dist-electron/
+release/
+resources/icon.iconset/
+.DS_Store
+npm-debug.log*
+
+# Keep personal exports and notes outside the public source tree.
+private/
+*.private-question-library.json
