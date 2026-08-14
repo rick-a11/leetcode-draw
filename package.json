@@ -69,6 +69,8 @@
       }
     ],
     "mac": {
+      "identity": "-",
+      "hardenedRuntime": false,
       "category": "public.app-category.education",
       "icon": "resources/icon.icns",
       "target": [
