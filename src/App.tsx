@@ -496,6 +496,18 @@ function DrawView({
             aria-label={emptyLibrary ? "前往题库" : "点击抽取题目"}
           >
             <span className="card-face card-back">
+              {emptyLibrary ? (
+                <span className="empty-card-motion" aria-hidden="true">
+                  <span className="empty-card-glow empty-card-glow-warm" />
+                  <span className="empty-card-glow empty-card-glow-cool" />
+                  <span className="empty-card-orbit empty-card-orbit-one" />
+                  <span className="empty-card-orbit empty-card-orbit-two" />
+                  <span className="empty-card-spark empty-card-spark-one" />
+                  <span className="empty-card-spark empty-card-spark-two" />
+                  <span className="empty-card-spark empty-card-spark-three" />
+                  <span className="empty-card-spark empty-card-spark-four" />
+                </span>
+              ) : null}
               <span className="card-reflection" aria-hidden="true" />
               <span className="tarot-aura" aria-hidden="true" />
               <span className="tarot-sigil" aria-hidden="true">

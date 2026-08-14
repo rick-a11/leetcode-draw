@@ -30,6 +30,17 @@ describe("application shell", () => {
     expect(screen.getByRole("button", { name: "跟随系统外观" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("keeps the breathing empty-library treatment decorative and the card navigable", async () => {
+    render(<App />);
+
+    await screen.findByText("题库为空，请导入题库文件");
+    const emptyCard = screen.getByRole("button", { name: "前往题库" });
+    expect(emptyCard.querySelector(".empty-card-motion")).toHaveAttribute("aria-hidden", "true");
+
+    fireEvent.click(emptyCard);
+    expect(await screen.findByRole("region", { name: "空题库归档预览" })).toBeInTheDocument();
+  });
+
   it("imports an LLM-converted JSON library and opens the categorized library", async () => {
     window.leetcodeDraw = {
       getState: vi.fn().mockResolvedValue(null),
