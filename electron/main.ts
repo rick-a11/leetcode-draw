@@ -9,7 +9,6 @@ const store = new Store<{ appState?: unknown }>({ name: "leetcode-draw-state" })
 type AppearanceMode = "system" | "light" | "dark";
 
 let appearanceMode: AppearanceMode = "light";
-let dockIconRefresh: ReturnType<typeof setTimeout> | undefined;
 
 function isAppearanceMode(value: unknown): value is AppearanceMode {
   return value === "system" || value === "light" || value === "dark";
@@ -22,16 +21,11 @@ function restoredAppearanceMode(): AppearanceMode {
   return isAppearanceMode(candidate.theme) ? candidate.theme : "light";
 }
 
-function iconMode() {
-  if (appearanceMode !== "system") return appearanceMode;
-  return nativeTheme.shouldUseDarkColors ? "dark" : "light";
-}
-
-function iconPath(mode = iconMode()) {
+function iconPath() {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, "icons", `icon-${mode}.png`);
+    return path.join(process.resourcesPath, "icon.png");
   }
-  return path.join(__dirname, "../resources", `icon-${mode}.png`);
+  return path.join(__dirname, "../resources", "icon.png");
 }
 
 function exampleLibraryPath() {
@@ -47,11 +41,6 @@ function syncApplicationIcon() {
 
   if (process.platform === "darwin") {
     app.dock?.setIcon(icon);
-    if (dockIconRefresh) clearTimeout(dockIconRefresh);
-    dockIconRefresh = setTimeout(() => {
-      const refreshedIcon = nativeImage.createFromPath(iconPath());
-      if (!refreshedIcon.isEmpty()) app.dock?.setIcon(refreshedIcon);
-    }, 180);
   }
   BrowserWindow.getAllWindows().forEach((window) => window.setIcon(icon));
 }
@@ -59,7 +48,6 @@ function syncApplicationIcon() {
 function applyAppearanceMode(value: AppearanceMode) {
   appearanceMode = value;
   nativeTheme.themeSource = value;
-  syncApplicationIcon();
 }
 
 function createWindow() {
@@ -162,10 +150,6 @@ app.whenReady().then(() => {
     if (!isAppearanceMode(value)) return false;
     applyAppearanceMode(value);
     return true;
-  });
-
-  nativeTheme.on("updated", () => {
-    if (appearanceMode === "system") syncApplicationIcon();
   });
 
   createWindow();

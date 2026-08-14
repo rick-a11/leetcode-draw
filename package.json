@@ -56,12 +56,8 @@
     },
     "extraResources": [
       {
-        "from": "resources/icon-light.png",
-        "to": "icons/icon-light.png"
-      },
-      {
-        "from": "resources/icon-dark.png",
-        "to": "icons/icon-dark.png"
+        "from": "resources/icon.png",
+        "to": "icon.png"
       },
       {
         "from": "resources/examples",
