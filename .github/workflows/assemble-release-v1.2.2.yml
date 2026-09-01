@@ -1,0 +1,57 @@
+name: Assemble LeetCode Draw v1.2.2 release asset
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: v1.2.2
+      FINAL_ASSET: LeetCode-Draw-1.2.2-arm64.zip
+      EXPECTED_SHA256: 3f120bd5eb2f624ab15dee3d99ec1697a66c0e97e77df8e8104ad267ea53a411
+      EXPECTED_SIZE: "125180776"
+    steps:
+      - name: Reassemble and validate the release ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_id="$(gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate --jq '.[] | select(.draft == true and .tag_name == "v1.2.2") | .id')"
+          test -n "${release_id}"
+
+          assets_json="$(gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets" --paginate)"
+          part_names=()
+          part_ids=()
+
+          for suffix in 00 01 02 03 04 05 06 07; do
+            part_name="${FINAL_ASSET}.part-${suffix}"
+            part_id="$(jq -r --arg name "${part_name}" '.[] | select(.name == $name and .state == "uploaded") | .id' <<<"${assets_json}")"
+            test -n "${part_id}"
+
+            gh api \
+              -H "Accept: application/octet-stream" \
+              "repos/${GITHUB_REPOSITORY}/releases/assets/${part_id}" \
+              > "${part_name}"
+
+            part_names+=("${part_name}")
+            part_ids+=("${part_id}")
+          done
+
+          cat "${part_names[@]}" > "${FINAL_ASSET}"
+          echo "${EXPECTED_SHA256}  ${FINAL_ASSET}" | sha256sum --check --strict
+          test "$(stat --format='%s' "${FINAL_ASSET}")" = "${EXPECTED_SIZE}"
+          unzip -t "${FINAL_ASSET}"
+
+          gh release upload "${RELEASE_TAG}" "${FINAL_ASSET}" --repo "${GITHUB_REPOSITORY}"
+
+          final_asset="$(gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}/assets" --paginate --jq '.[] | select(.name == "LeetCode-Draw-1.2.2-arm64.zip") | [.state, .size] | @tsv')"
+          test "${final_asset}" = $'uploaded\t125180776'
+
+          for part_id in "${part_ids[@]}"; do
+            gh api --method DELETE "repos/${GITHUB_REPOSITORY}/releases/assets/${part_id}"
+          done
