@@ -136,7 +136,7 @@ The result is written to `release/LeetCode-Draw-<version>-arm64.dmg`. The local 
 After `npm run dist`, install the packaged app with:
 
 ```bash
-./scripts/install-local.sh
+npm run install:local
 ```
 
 The installer validates version `1.2.2`, bundle ID `com.leetcode-draw.desktop`, the executable, and the code signature before touching `/Applications`. It preserves the previous installation under `release/install-backups/`, installs through a temporary `.next` bundle with automatic rollback, and registers only `/Applications/LeetCode Draw.app`. Successful backups are sealed into recoverable, non-application folders so Spotlight and Launchpad do not list Electron helper bundles as duplicate apps.

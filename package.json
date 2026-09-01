@@ -15,7 +15,8 @@
     "icons": "node scripts/generate-icons.mjs",
     "build": "npm run icons && tsc -p tsconfig.json && vite build && node scripts/assert-packaged-assets.mjs && tsc -p electron/tsconfig.json && node scripts/assert-electron-bridge.mjs",
     "test": "vitest run",
-    "dist": "npm run test && npm run build && electron-builder --mac dmg"
+    "dist": "npm run test && npm run build && electron-builder --mac dmg",
+    "install:local": "bash ./scripts/install-local.sh"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
