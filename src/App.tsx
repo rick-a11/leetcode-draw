@@ -1,11 +1,10 @@
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   ArrowClockwise,
   ArrowSquareOut,
   BookOpen,
   Cards,
   CheckCircle,
-  ClipboardText,
   FileArrowUp,
   Leaf,
   MagnifyingGlass,
@@ -17,6 +16,7 @@ import {
   Trash,
   X
 } from "@phosphor-icons/react";
+import { ImportDrawer } from "./components/ImportDrawer";
 import {
   computePool,
   diffClass,
@@ -26,11 +26,12 @@ import {
   pickQuestion,
   toRecord
 } from "./lib/draw";
+import { CONVERSION_PROMPT, QUESTION_LIBRARY_EXAMPLE } from "./lib/importContent";
 import type {
   AppState,
   Difficulty,
   DrawRecord,
-  ImportQuestionsResult,
+  ImportReport,
   Question,
   ThemeMode
 } from "./lib/types";
@@ -51,33 +52,9 @@ const fallbackStorage = {
 };
 
 const DIFFICULTIES: Difficulty[] = ["简单", "中等", "困难"];
-const QUESTION_LIBRARY_EXAMPLE = `{
-  "format": "leetcode-draw/question-library",
-  "version": 1,
-  "questions": [
-    { "leetcodeId": 1, "name": "两数之和", "difficulty": "简单" },
-    { "leetcodeId": 2, "name": "两数相加", "difficulty": "中等" },
-    { "leetcodeId": 42, "name": "接雨水", "difficulty": "困难" }
-  ]
-}`;
-const CONVERSION_PROMPT = `请从我提供的力扣题目网站截图或文本中提取题目，并输出一个可导入 LeetCode Draw 的 JSON 文件。
-
-要求：
-1. 每道题必须保留力扣官网的原始题号，字段名固定为 leetcodeId。
-2. 只保留力扣官网题号、中文题目名称和难度。
-3. 难度只能写为：简单、中等、困难。
-4. 去除重复题号和无法确认的题目。
-5. 只输出有效 JSON，不要 Markdown、解释、代码围栏或其他文字。
-6. JSON 必须严格使用下面的结构：
-
-${QUESTION_LIBRARY_EXAMPLE}`;
 
 type AppView = "draw" | "library";
 type LibraryFilter = "全部" | Difficulty;
-type ImportReport = Pick<ImportQuestionsResult, "format" | "issues"> & {
-  fileName: string;
-  added: number;
-};
 
 function getBridge() {
   return window.leetcodeDraw ?? fallbackStorage;
@@ -93,10 +70,13 @@ export function App() {
   const [status, setStatus] = useState("正在加载本地题库");
   const [ready, setReady] = useState(false);
   const [resetConfirming, setResetConfirming] = useState(false);
+  const [libraryClearConfirming, setLibraryClearConfirming] = useState(false);
   const [filter, setFilter] = useState<LibraryFilter>("全部");
   const [query, setQuery] = useState("");
   const [importReport, setImportReport] = useState<ImportReport | null>(null);
+  const [importDrawerOpen, setImportDrawerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importTriggerRef = useRef<HTMLButtonElement>(null);
 
   const bridge = getBridge();
   const allQuestions = useMemo(
@@ -167,6 +147,12 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [resetConfirming]);
 
+  useEffect(() => {
+    if (!libraryClearConfirming) return;
+    const timer = window.setTimeout(() => setLibraryClearConfirming(false), 3500);
+    return () => window.clearTimeout(timer);
+  }, [libraryClearConfirming]);
+
   function drawQuestion() {
     const pick = pickQuestion(pool.available);
     if (!pick) return;
@@ -210,6 +196,24 @@ export function App() {
     setStatus("抽题记录已清空");
   }
 
+  function clearLibrary() {
+    if (!libraryClearConfirming) {
+      setLibraryClearConfirming(true);
+      return;
+    }
+
+    setCustomQuestions([]);
+    setHistory([]);
+    setCurrent(null);
+    setFlipped(false);
+    setLibraryClearConfirming(false);
+    setImportReport(null);
+    setFilter("全部");
+    setQuery("");
+    setStatus("题库和抽题记录已清空");
+    setView("library");
+  }
+
   function openQuestion(question: Question) {
     void bridge.openLeetCode(leetcodeSearchUrl(question));
   }
@@ -217,6 +221,16 @@ export function App() {
   function showLibrary(nextFilter: LibraryFilter = "全部") {
     setFilter(nextFilter);
     setView("library");
+  }
+
+  function openImportDrawer() {
+    setView("library");
+    setImportDrawerOpen(true);
+  }
+
+  function closeImportDrawer() {
+    setImportDrawerOpen(false);
+    window.requestAnimationFrame(() => importTriggerRef.current?.focus());
   }
 
   function applyImport(fileName: string, content: string) {
@@ -238,6 +252,7 @@ export function App() {
       setStatus("没有可导入的有效题目，请检查文件格式");
     }
     setView("library");
+    return result;
   }
 
   async function chooseImportFile() {
@@ -261,7 +276,10 @@ export function App() {
     }
 
     if ("content" in selected && typeof selected.content === "string") {
-      applyImport(selected.name, selected.content);
+      const result = applyImport(selected.name, selected.content);
+      if (result.questions.length > 0) {
+        closeImportDrawer();
+      }
     }
   }
 
@@ -278,7 +296,10 @@ export function App() {
       });
       return;
     }
-    applyImport(file.name, await file.text());
+    const result = applyImport(file.name, await file.text());
+    if (result.questions.length > 0) {
+      closeImportDrawer();
+    }
   }
 
   async function copyConversionPrompt() {
@@ -328,10 +349,8 @@ export function App() {
 
   return (
     <main className="app-shell">
-      <div className="ambient ambient-one" aria-hidden="true" />
-      <div className="ambient ambient-two" aria-hidden="true" />
       <section className="workspace">
-        <header className="topbar liquid-glass-web-approx">
+        <header className="topbar editorial-surface">
           <div className="brand-block">
             <span className="brand-mark" aria-hidden="true">
               <Cards size={24} weight="fill" />
@@ -386,7 +405,6 @@ export function App() {
             onDraw={drawQuestion}
             onOpenQuestion={openQuestion}
             onShowLibrary={showLibrary}
-            onChooseImport={chooseImportFile}
             onClearHistory={clearHistory}
           />
         ) : (
@@ -397,12 +415,18 @@ export function App() {
             filter={filter}
             query={query}
             importReport={importReport}
+            importDrawerOpen={importDrawerOpen}
+            clearConfirming={libraryClearConfirming}
+            importTriggerRef={importTriggerRef}
+            onOpenImport={openImportDrawer}
+            onCloseImport={closeImportDrawer}
             onChooseImport={chooseImportFile}
             onCopyPrompt={copyConversionPrompt}
             onSaveExample={saveExampleLibrary}
             onClearImportReport={() => setImportReport(null)}
             onFilterChange={setFilter}
             onQueryChange={setQuery}
+            onClearLibrary={clearLibrary}
             onRemoveQuestion={removeCustomQuestion}
             onOpenQuestion={openQuestion}
           />
@@ -448,7 +472,6 @@ function DrawView({
   onDraw,
   onOpenQuestion,
   onShowLibrary,
-  onChooseImport,
   onClearHistory
 }: {
   current: Question | null;
@@ -464,7 +487,6 @@ function DrawView({
   onDraw: () => void;
   onOpenQuestion: (question: Question) => void;
   onShowLibrary: (filter?: LibraryFilter) => void;
-  onChooseImport: () => void;
   onClearHistory: () => void;
 }) {
   const emptyLibrary = total === 0;
@@ -472,7 +494,7 @@ function DrawView({
 
   return (
     <div className="draw-layout">
-      <section className="draw-panel liquid-glass-web-approx" aria-label="随机抽题">
+      <section className="draw-panel editorial-surface" aria-label="随机抽题">
         <div className="section-heading draw-heading">
           <div>
             <span className="section-kicker">今日抽题</span>
@@ -493,7 +515,7 @@ function DrawView({
             type="button"
             onClick={emptyLibrary ? () => onShowLibrary() : onDraw}
             disabled={unavailable}
-            aria-label={emptyLibrary ? "前往题库" : "点击抽取题目"}
+            aria-label={emptyLibrary ? "打开我的题库" : "点击抽取题目"}
           >
             <span className="card-face card-back">
               {emptyLibrary ? (
@@ -508,7 +530,6 @@ function DrawView({
                   <span className="empty-card-spark empty-card-spark-four" />
                 </span>
               ) : null}
-              <span className="card-reflection" aria-hidden="true" />
               <span className="tarot-aura" aria-hidden="true" />
               <span className="tarot-sigil" aria-hidden="true">
                 <span className="tarot-ring tarot-ring-outer" />
@@ -526,7 +547,7 @@ function DrawView({
                 <span className="empty-card-content">
                   <BookOpen size={38} weight="duotone" />
                   <strong>题库为空</strong>
-                  <small>导入第一份题库文件</small>
+                  <small>前往我的题库导入</small>
                 </span>
               ) : (
                 <span className="card-back-content">
@@ -555,16 +576,10 @@ function DrawView({
 
         <div className="draw-actions">
           {emptyLibrary ? (
-            <>
-              <button className="primary-action" type="button" onClick={onChooseImport}>
-                <FileArrowUp size={20} weight="bold" />
-                导入题库文件
-              </button>
-              <button className="secondary-action" type="button" onClick={() => onShowLibrary()}>
-                <BookOpen size={19} weight="bold" />
-                查看导入格式
-              </button>
-            </>
+            <button className="primary-action" type="button" onClick={() => onShowLibrary()}>
+              <BookOpen size={19} weight="bold" />
+              前往题库
+            </button>
           ) : (
             <>
               <button className="primary-action" type="button" onClick={onDraw} disabled={unavailable}>
@@ -594,17 +609,13 @@ function DrawView({
       </section>
 
       <aside className="draw-sidebar">
-        <section className="sidebar-panel draw-library-panel liquid-glass-web-approx">
+        <section className="sidebar-panel draw-library-panel editorial-surface">
           <section className="overview-section">
             <div className="panel-heading">
               <div>
                 <span className="section-kicker">题库概览</span>
                 <h2>按难度浏览</h2>
               </div>
-              <button className="primary-compact overview-import" type="button" onClick={onChooseImport}>
-                <FileArrowUp size={17} weight="bold" />
-                导入 JSON
-              </button>
             </div>
             <div className="difficulty-grid">
               {DIFFICULTIES.map((difficulty) => (
@@ -653,12 +664,18 @@ function LibraryView({
   filter,
   query,
   importReport,
+  importDrawerOpen,
+  clearConfirming,
+  importTriggerRef,
+  onOpenImport,
+  onCloseImport,
   onChooseImport,
   onCopyPrompt,
   onSaveExample,
   onClearImportReport,
   onFilterChange,
   onQueryChange,
+  onClearLibrary,
   onRemoveQuestion,
   onOpenQuestion
 }: {
@@ -668,30 +685,64 @@ function LibraryView({
   filter: LibraryFilter;
   query: string;
   importReport: ImportReport | null;
+  importDrawerOpen: boolean;
+  clearConfirming: boolean;
+  importTriggerRef: RefObject<HTMLButtonElement | null>;
+  onOpenImport: () => void;
+  onCloseImport: () => void;
   onChooseImport: () => void;
   onCopyPrompt: () => void;
   onSaveExample: () => void;
   onClearImportReport: () => void;
   onFilterChange: (value: LibraryFilter) => void;
   onQueryChange: (value: string) => void;
+  onClearLibrary: () => void;
   onRemoveQuestion: (question: Question) => void;
   onOpenQuestion: (question: Question) => void;
 }) {
   const matchingCount = groups.reduce((total, group) => total + group.questions.length, 0);
+  const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pendingRemovalId) return;
+    const timer = window.setTimeout(() => setPendingRemovalId(null), 3500);
+    return () => window.clearTimeout(timer);
+  }, [pendingRemovalId]);
+
+  function requestQuestionRemoval(question: Question) {
+    if (pendingRemovalId === question.id) {
+      onRemoveQuestion(question);
+      setPendingRemovalId(null);
+      return;
+    }
+    setPendingRemovalId(question.id);
+  }
 
   return (
     <div className="library-layout">
-      <section className="library-panel liquid-glass-web-approx">
+      <section className="library-panel editorial-surface">
         <div className="section-heading library-heading">
           <div>
             <span className="section-kicker">我的题库</span>
             <h2>{allQuestionCount === 0 ? "从第一道题开始" : `共 ${allQuestionCount} 道题目`}</h2>
             <p>按难度查看、搜索和维护你的题目；每道题都会保留力扣官网原始题号。</p>
           </div>
-          <button className="primary-compact" type="button" onClick={onChooseImport}>
-            <FileArrowUp size={18} weight="bold" />
-            导入题库
-          </button>
+          <div className="library-heading-actions">
+            {allQuestionCount > 0 && (
+              <button
+                className={`clear-library-button ${clearConfirming ? "confirming" : ""}`}
+                type="button"
+                onClick={onClearLibrary}
+              >
+                <Trash size={17} weight="bold" />
+                {clearConfirming ? "确认清空题库" : "清空题库"}
+              </button>
+            )}
+            <button ref={importTriggerRef} className="primary-compact" type="button" onClick={onOpenImport}>
+              <FileArrowUp size={18} weight="bold" />
+              导入题库
+            </button>
+          </div>
         </div>
 
         <div className="library-toolbar">
@@ -709,11 +760,30 @@ function LibraryView({
           </div>
         </div>
 
-        {importReport && <ImportReportCard report={importReport} onClose={onClearImportReport} />}
+        {allQuestionCount > 0 && (
+          <div className="library-difficulty-summary" role="list" aria-label="题库难度统计">
+            {DIFFICULTIES.map((difficulty) => (
+              <article
+                className={`library-difficulty-item ${diffClass(difficulty)}`}
+                key={difficulty}
+                role="listitem"
+                aria-label={`${difficulty} ${difficultyCounts[difficulty]}`}
+              >
+                <span>
+                  <DifficultyGlyph difficulty={difficulty} />
+                  {difficulty}
+                </span>
+                <strong>{difficultyCounts[difficulty]}</strong>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {importReport && importReport.added > 0 && <ImportReportCard report={importReport} onClose={onClearImportReport} />}
 
         {allQuestionCount === 0 ? (
           <div className="library-empty-shell">
-            <EmptyLibrary onChooseImport={onChooseImport} />
+            <EmptyLibrary />
             <section className="empty-library-footer" aria-label="空题库归档预览">
               <p>导入后自动归档</p>
               <div className="empty-library-categories" role="list" aria-label="导入后的难度归档">
@@ -747,7 +817,7 @@ function LibraryView({
                     {questions.map((question) => (
                       <article className="question-row" key={question.id}>
                         <button className="question-open" type="button" onClick={() => onOpenQuestion(question)} aria-label={`在力扣中定位原题第 ${question.lc} 题：${question.name}`}>
-                          <span className="question-number" aria-label={`力扣官方题号 ${question.lc}`}>
+                          <span className={`question-number ${diffClass(question.diff)}`} aria-label={`力扣官方题号 ${question.lc}`}>
                             <small>力扣原题</small>
                             <b>#{question.lc}</b>
                           </span>
@@ -757,8 +827,15 @@ function LibraryView({
                           </strong>
                           <ArrowSquareOut size={17} weight="bold" aria-hidden="true" />
                         </button>
-                        <button className="remove-button" type="button" onClick={() => onRemoveQuestion(question)} aria-label={`从题库移出 ${question.name}`} title="移出题库">
+                        <button
+                          className={`remove-button ${pendingRemovalId === question.id ? "confirming" : ""}`}
+                          type="button"
+                          onClick={() => requestQuestionRemoval(question)}
+                          aria-label={pendingRemovalId === question.id ? `确认删除 ${question.name}` : `删除 ${question.name}`}
+                          title={pendingRemovalId === question.id ? "再次点击确认删除" : "删除题目"}
+                        >
                           <Trash size={17} weight="bold" />
+                          <span>{pendingRemovalId === question.id ? "确认删除" : "删除"}</span>
                         </button>
                       </article>
                     ))}
@@ -770,53 +847,24 @@ function LibraryView({
         )}
       </section>
 
-      <aside className="import-panel liquid-glass-web-approx">
-        <div className="panel-heading">
-          <div>
-            <span className="section-kicker">题单转换</span>
-            <h2>让大模型整理题库</h2>
-          </div>
-        </div>
-        <p className="import-intro">把题目网站的截图或文本发给任意大模型。模型会按固定 JSON 格式整理力扣官网原题号、题名和难度，然后将生成的文件导入这里。</p>
-        <div className="model-flow" aria-label="题库导入流程">
-          <span>提供题目截图或文本</span>
-          <span>让模型输出题库 JSON</span>
-          <span>选择生成的 .json 文件</span>
-        </div>
-        <div className="conversion-actions">
-          <button className="primary-action" type="button" onClick={onChooseImport}>
-            <FileArrowUp size={18} weight="bold" />
-            选择题库 JSON 文件
-          </button>
-          <button className="secondary-action" type="button" onClick={onCopyPrompt}>
-            <ClipboardText size={18} weight="bold" />
-            复制给大模型的提示词
-          </button>
-        </div>
-        <section className="format-guide">
-          <h3>固定文件格式</h3>
-          <p><b>leetcodeId</b> 是力扣官网原始题号。文件根对象、格式标识和版本均会校验；保存为 <b>.json</b> 文件后即可导入。</p>
-          <pre><code>{QUESTION_LIBRARY_EXAMPLE}</code></pre>
-          <button className="example-download" type="button" onClick={onSaveExample}>
-            <BookOpen size={17} weight="bold" />
-            下载完整三题示例 JSON
-          </button>
-        </section>
-      </aside>
+      <ImportDrawer
+        open={importDrawerOpen}
+        report={importReport?.added === 0 ? importReport : null}
+        onClose={onCloseImport}
+        onChooseImport={onChooseImport}
+        onCopyPrompt={onCopyPrompt}
+        onSaveExample={onSaveExample}
+      />
     </div>
   );
 }
 
-function EmptyLibrary({ onChooseImport }: { onChooseImport: () => void }) {
+function EmptyLibrary() {
   return (
     <div className="library-empty-state">
       <span className="empty-icon"><BookOpen size={35} weight="duotone" /></span>
       <h3>题库暂时为空</h3>
-      <p>将题目截图或文本交给大模型，生成 LeetCode Draw JSON 文件后导入。导入后即可按难度分类浏览和随机抽题。</p>
-      <button className="primary-compact" type="button" onClick={onChooseImport}>
-        <FileArrowUp size={18} weight="bold" />
-        选择 JSON 题库文件
-      </button>
+      <p>使用页面右上角的“导入题库”，加入第一份 LeetCode Draw JSON 文件。</p>
     </div>
   );
 }
