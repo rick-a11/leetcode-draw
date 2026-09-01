@@ -105,7 +105,7 @@ The repository includes a safe, ready-to-import example: [resources/examples/lee
 
 The latest public build is available from [GitHub Releases](https://github.com/rick-a11/leetcode-draw/releases/latest).
 
-The provided DMG targets Apple silicon (`arm64`). It is ad-hoc signed for bundle integrity checks but is **not notarized by Apple**. If your security policy requires a notarized Developer ID build, build the app locally or sign and notarize your own distribution.
+The release ZIP contains an Apple silicon (`arm64`) DMG plus a SHA-256 checksum file. The application is ad-hoc signed for bundle integrity checks but is **not notarized by Apple**. If your security policy requires a notarized Developer ID build, build the app locally or sign and notarize your own distribution.
 
 ## Run locally
 
