@@ -2,11 +2,45 @@ node_modules/
 .npm-cache/
 dist/
 dist-electron/
+coverage/
 release/
 resources/icon.iconset/
 .DS_Store
+.superpowers/
+docs/superpowers/
+.worktrees/
+worktrees/
+.codex/
+.agents/
+.idea/
+.vscode/
 npm-debug.log*
+*.log
+
+# Local credentials and signing material never belong in the repository.
+.env
+.env.*
+*.env
+!.env.example
+.npmrc
+.yarnrc*
+credentials*.json
+secrets*.json
+*.pem
+*.key
+*.p12
+*.mobileprovision
+
+# Keep packaged apps, installers, and raw desktop captures out of source control.
+*.app
+*.appbackup.noindex/
+*.dmg
+*.dmg.blockmap
+Screenshot*.png
+截屏*.png
 
 # Keep personal exports and notes outside the public source tree.
 private/
 *.private-question-library.json
+*题库备份*.json
+*.jsonbackup.noindex

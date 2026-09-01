@@ -1,10 +1,29 @@
 # LeetCode Draw
 
-LeetCode Draw is a local-first macOS desktop app that turns a personal LeetCode practice list into a calm, randomly drawable question library. A new installation starts with **zero questions**. Instead of entering questions one at a time, use any large language model to convert a screenshot or text export into one validated JSON file, then import that file into the app.
+LeetCode Draw is a local-first macOS desktop app that turns a personal LeetCode practice list into a calm, randomly drawable question library. A new installation starts with **zero questions**. Convert a screenshot or text export into one validated JSON file, import it once, and keep the resulting library editable on your Mac.
 
-The interface combines a warm light theme, a true dark theme, and an optional system setting with a liquid-glass treatment and a tarot-inspired draw animation.
+Version 1.2.2 uses a Claude Editorial interface: warm opaque surfaces, restrained serif headings, a true warm-dark appearance, and a tarot-inspired draw animation.
 
-[View the light-mode app preview →](docs/images/app-overview-light.jpg) · [View the dark-mode app preview →](docs/images/app-overview-dark.jpg)
+## Preview
+
+<table>
+  <tr>
+    <th>Light · Draw</th>
+    <th>Light · Library</th>
+  </tr>
+  <tr>
+    <td><img src="docs/images/app-overview-light.jpg" alt="LeetCode Draw empty draw screen in light mode"></td>
+    <td><img src="docs/images/app-library-light.jpg" alt="LeetCode Draw empty library in light mode"></td>
+  </tr>
+  <tr>
+    <th>Dark · Draw</th>
+    <th>Dark · Library</th>
+  </tr>
+  <tr>
+    <td><img src="docs/images/app-overview-dark.jpg" alt="LeetCode Draw empty draw screen in dark mode"></td>
+    <td><img src="docs/images/app-library-dark.jpg" alt="LeetCode Draw empty library in dark mode"></td>
+  </tr>
+</table>
 
 *A fresh installation: zero questions, no draw history, and one JSON import away from a personal practice library. The empty-card light gently breathes in the app and settles to a still composition when macOS Reduce Motion is enabled.*
 
@@ -14,12 +33,16 @@ The interface combines a warm light theme, a true dark theme, and an optional sy
 
 - **Start empty.** A fresh installation has no built-in question library and nothing available to draw.
 - **Import once, not one-by-one.** Import a validated JSON library created from a practice-site screenshot or text.
+- **One clear import place.** The library heading owns the only import entry; the complete workflow opens in an accessible right-side drawer.
+- **Keep the library editable.** Remove one imported question with inline confirmation, or clear the entire library and draw history with a separate two-step action.
 - **Keep the official reference.** Every item preserves its original LeetCode problem number.
-- **Browse by difficulty.** View counts and questions in 简单, 中等, and 困难 categories.
+- **See difficulty immediately.** Official numbers use teal-green for 简单, amber for 中等, and red for 困难, with text labels always retained.
+- **Use the whole library canvas.** Question groups fill the content width and balance into two columns on wide windows, then collapse to one column on narrower windows.
 - **Draw with a cooldown.** A drawn question is held out of the pool for five days, making repeated draws more useful.
 - **Review locally.** Search the library, inspect recent draws, remove an individual imported question, and open the matching LeetCode China search result when you choose to.
 - **Choose your appearance.** Select Light, Dark, or System appearance; the Dock icon follows the active light or dark presentation.
 - **Get useful import feedback.** Invalid or duplicate rows are reported while valid rows still import.
+- **Stay local by default.** There is no account, telemetry, cloud sync, analytics service, or bundled private question library.
 
 ## Privacy by design
 
@@ -37,7 +60,7 @@ If you choose to give a screenshot or text list to an external model for convers
 1. Give a screenshot or text list from your practice site to a large language model.
 2. Ask it to return **only** a JSON file matching the schema below. Do not ask it to add explanations or Markdown fences.
 3. Save the result as a `.json` file.
-4. In LeetCode Draw, choose **Import JSON** and select that file.
+4. In LeetCode Draw, open **我的题库**, choose **导入题库**, then select the JSON file from the drawer.
 
 You can use this prompt with a model:
 
@@ -78,6 +101,12 @@ You can use this prompt with a model:
 
 The repository includes a safe, ready-to-import example: [resources/examples/leetcode-draw-example.json](resources/examples/leetcode-draw-example.json).
 
+## Download
+
+The latest public build is available from [GitHub Releases](https://github.com/rick-a11/leetcode-draw/releases/latest).
+
+The provided DMG targets Apple silicon (`arm64`). It is ad-hoc signed for bundle integrity checks but is **not notarized by Apple**. If your security policy requires a notarized Developer ID build, build the app locally or sign and notarize your own distribution.
+
 ## Run locally
 
 ### Requirements
@@ -102,9 +131,19 @@ npm run dist
 
 The result is written to `release/LeetCode-Draw-<version>-arm64.dmg`. The local build uses an ad-hoc macOS signature so the complete bundle can be integrity-checked on the build machine. It is not an Apple Developer ID or notarized distribution; maintainers distributing builds to other people should configure their own Developer ID signing and notarization.
 
+### Install the local build safely
+
+After `npm run dist`, install the packaged app with:
+
+```bash
+./scripts/install-local.sh
+```
+
+The installer validates version `1.2.2`, bundle ID `com.leetcode-draw.desktop`, the executable, and the code signature before touching `/Applications`. It preserves the previous installation under `release/install-backups/`, installs through a temporary `.next` bundle with automatic rollback, and registers only `/Applications/LeetCode Draw.app`. Successful backups are sealed into recoverable, non-application folders so Spotlight and Launchpad do not list Electron helper bundles as duplicate apps.
+
 ## Quality checks
 
-`npm test` covers the import format, duplicate and invalid-row handling, the three-question sample, cooldown behavior, theme behavior, and the main import/draw flow. `npm run build` also checks the Electron bridge and packaged assets before a DMG is created.
+The current suite contains 28 tests covering the import format, duplicate and invalid-row handling, the three-question sample, cooldown behavior, theme behavior, the sole import entry, drawer focus and close behavior, successful and invalid imports, semantic difficulty numbers, individual deletion, full-library clearing, and the main draw flow. `npm run build` also checks the Electron bridge and packaged assets before a DMG is created.
 
 ## Technology
 
