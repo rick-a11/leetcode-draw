@@ -44,3 +44,10 @@ export interface ImportQuestionsResult {
   questions: Question[];
   issues: ImportIssue[];
 }
+
+export interface ImportReport {
+  fileName: string;
+  format: "json";
+  added: number;
+  issues: ImportIssue[];
+}
